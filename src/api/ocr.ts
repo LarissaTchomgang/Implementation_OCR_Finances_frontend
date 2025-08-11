@@ -1,6 +1,7 @@
 // src/api/ocr.ts
 import axios from 'axios';
 
+
 const API_URL ='https://implementation-ocr-finances-backend.onrender.com/'; //'http://localhost:8000/api'; // Assure-toi que ton backend tourne bien à ce port
 
 

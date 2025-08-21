@@ -17,13 +17,11 @@ const ReviewPage: React.FC = () => {
     }
   }, []);
 
-  // Gestion du changement dans les champs bancaires
   const handleChange = (field: string, value: string) => {
     if (!formData) return;
     setFormData({ ...formData, [field]: value });
   };
 
-  // Gestion du changement dans les transactions
   const handleTransactionChange = (index: number, field: string, value: string) => {
     if (!formData) return;
     const updated = [...formData.transactions];
@@ -31,16 +29,8 @@ const ReviewPage: React.FC = () => {
     setFormData({ ...formData, transactions: updated });
   };
 
-  // Validation et génération Excel
-  const handleValidate = async () => {
-    if (!formData) return;
-    const res = await generateExcelFromData(formData);
-    alert("Fichier Excel généré : " + res.excel_file);
-    navigate("/");
-  };
-
-  // Ajouter une nouvelle ligne vide
   const addTransaction = () => {
+    if (!formData) return;
     setFormData({
       ...formData,
       transactions: [
@@ -48,6 +38,27 @@ const ReviewPage: React.FC = () => {
         { date: "", description: "", montant: "", sens: "" },
       ],
     });
+  };
+
+  const handleValidate = async () => {
+    if (!formData) return;
+    const res = await generateExcelFromData(formData);
+    alert("Fichier Excel généré : " + res.excel_file);
+
+    // Sauvegarde dans l'historique
+    const history = JSON.parse(localStorage.getItem("history") || "[]");
+    const newEntry = {
+      fileName: formData.fileName || "Relevé",
+      date: new Date().toLocaleString(),
+      excelFile: res.excel_file,
+    };
+    localStorage.setItem("history", JSON.stringify([newEntry, ...history]));
+
+    navigate("/"); // Retour à la page principale
+  };
+
+  const handleCancel = () => {
+    navigate("/"); // Retour sans validation
   };
 
   return (
@@ -69,6 +80,12 @@ const ReviewPage: React.FC = () => {
             </Button>
             <Button onClick={handleValidate} style={{ marginLeft: "1rem" }}>
               ✅ Valider et Générer Excel
+            </Button>
+            <Button
+              onClick={handleCancel}
+              style={{ marginLeft: "1rem", backgroundColor: "#FFD700", color: "#333" }}
+            >
+              ⬅ Retour 
             </Button>
           </div>
         </>
@@ -102,5 +119,6 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: "flex",
     justifyContent: "center",
     marginTop: "2rem",
+    gap: "1rem",
   },
 };

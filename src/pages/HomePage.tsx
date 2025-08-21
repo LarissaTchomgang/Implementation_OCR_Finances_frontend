@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadAndExtract, generateExcelFromData } from "../api/ocr";
 import BankForm from "../components/BankForm";
@@ -10,7 +10,14 @@ const HomePage: React.FC = () => {
   const [formData, setFormData] = useState<any | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
   const navigate = useNavigate();
+
+  // Charger l’historique au démarrage
+  useEffect(() => {
+    const saved = localStorage.getItem("history");
+    if (saved) setHistory(JSON.parse(saved));
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0] || null;
@@ -33,7 +40,7 @@ const HomePage: React.FC = () => {
       setFormData(response.extracted_data);
       localStorage.setItem("formData", JSON.stringify(response.extracted_data));
     } catch (error) {
-      alert("Une erreur est survenue lors de l'extraction.");
+      alert("❌ Une erreur est survenue lors de l'extraction.");
     } finally {
       setLoading(false);
     }
@@ -41,8 +48,23 @@ const HomePage: React.FC = () => {
 
   const handleValidate = async () => {
     if (!formData) return;
-    const res = await generateExcelFromData(formData);
-    alert("Fichier Excel généré : " + res.excel_file);
+    try {
+      const res = await generateExcelFromData(formData);
+
+      // Ajouter à l’historique
+      const newEntry = {
+        fileName: file?.name || "Relevé",
+        excelFile: res.excel_file,
+        date: new Date().toLocaleString(),
+      };
+      const updatedHistory = [newEntry, ...history];
+      setHistory(updatedHistory);
+      localStorage.setItem("history", JSON.stringify(updatedHistory));
+
+      alert("✅ Fichier Excel généré : " + res.excel_file);
+    } catch (err) {
+      alert("❌ Erreur lors de la génération du fichier Excel.");
+    }
   };
 
   const handleChange = (field: string, value: string) => {
@@ -55,47 +77,54 @@ const HomePage: React.FC = () => {
     setFormData({ ...formData, transactions: updated });
   };
 
+  const handleReset = () => {
+    setFile(null);
+    setFormData(null);
+    setImagePreview(null);
+    localStorage.removeItem("formData");
+  };
+
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>🧾 Extraction Automatique de Relevé Bancaire</h1>
 
-      {/* Texte explicatif (visible tant qu'aucun fichier n'est sélectionné) */}
+      {/* Texte explicatif si aucun fichier */}
       {!file && (
         <div style={styles.introBox}>
           <p>
             Cette application vous permet d’extraire automatiquement les informations clés d’un relevé bancaire
-            (nom de la banque, titulaire, numéro de compte, transactions, etc.) à partir d’une image. <br />
+            (banque, titulaire, compte, transactions, etc.) à partir d’une image et de générer le document Excel correspondant. <br />
             <br />
-            📎 Pour commencer, choisissez un fichier d’image (JPG, PNG). Vous verrez ensuite un aperçu et un formulaire
-            pré-rempli que vous pourrez valider ou corriger avant de générer un fichier Excel.
+            📎 Pour commencer, choisissez un fichier. Un aperçu et un formulaire prérempli apparaîtront.
           </p>
         </div>
       )}
 
-      {/* Zone d’upload visible même sans fichier */}
+      {/* Upload */}
       {!imagePreview && (
         <div style={styles.uploadPlaceholder}>
           <label style={styles.fileUploadLabel}>
             📁 Choisir un fichier
-            <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
-            
+            <input type="file" accept="image/*,.pdf" style={{ display: "none" }} onChange={handleFileChange} />
           </label>
         </div>
       )}
 
-      {/* Affichage de l’aperçu une fois le fichier choisi */}
+      {/* Aperçu */}
       {imagePreview && (
         <div style={styles.previewContainer}>
           <img src={imagePreview} alt="Aperçu" style={styles.imagePreview} />
           <div style={{ textAlign: "center", marginTop: "1rem" }}>
             <Button onClick={handleUpload}>🔍 Lancer l'extraction</Button>
+            <Button onClick={handleReset} variant="outline">♻️ Réinitialiser</Button>
+
           </div>
         </div>
       )}
 
       {loading && <p style={styles.spinner}>⏳ Extraction en cours...</p>}
 
-      {/* Résultat affiché si disponible */}
+      {/* Résultat */}
       {formData && (
         <div style={styles.formContainer}>
           <BankForm data={formData} onChange={handleChange} readOnly={true} />
@@ -107,43 +136,84 @@ const HomePage: React.FC = () => {
           <div style={styles.buttonGroup}>
             <Button onClick={handleValidate}>✅ Valider et Générer Excel</Button>
             <Button onClick={() => navigate("/review")}>✏️ Modifier le formulaire</Button>
+            <Button onClick={handleReset} variant="outline">♻️ Réinitialiser</Button>
+
           </div>
         </div>
       )}
+
+{/* Bouton pour accéder à l'historique */}
+<div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
+  <button
+    onClick={() => navigate("/historique")}
+    style={{
+      backgroundColor: "#0057A0",
+      color: "white",
+      border: "none",
+      padding: "12px 20px",
+      borderRadius: "8px",
+      fontSize: "16px",
+      cursor: "pointer",
+      transition: "background 0.3s",
+      fontWeight: "bold",
+    }}
+    onMouseOver={(e) =>
+      (e.currentTarget.style.backgroundColor = "#004080")
+    }
+    onMouseOut={(e) =>
+      (e.currentTarget.style.backgroundColor = "#0057A0")
+    }
+  >
+    📂 Voir l’historique
+  </button>
+</div>
+
+      {/* Historique
+      {history.length > 0 && (
+        <div style={styles.historyBox}>
+          <h2>📂 Historique des relevés exportés</h2>
+          <button 
+            onClick={() => navigate("/historique")} 
+            style={styles.linkButton}
+          >
+            Voir tout l’historique →
+          </button>
+        </div>
+      )} */}
+
     </div>
   );
 };
 
 export default HomePage;
 
-// 🎨 STYLES INLINE — SAPHIR Edition
+// 🎨 Styles
 const styles: { [key: string]: React.CSSProperties } = {
   container: {
     padding: "2rem",
-    maxWidth: "900px",
+    maxWidth: "950px",
     margin: "auto",
     fontFamily: "Segoe UI, sans-serif",
     backgroundColor: "#ffffff",
   },
   title: {
     fontSize: "28px",
-    color: "#0057A0", // Bleu SAPHIR
+    color: "#0057A0",
     marginBottom: "1rem",
     textAlign: "center",
     fontWeight: "bold",
   },
   introBox: {
-    backgroundColor: "#FFF8DC", // Jaune pâle
+    backgroundColor: "#FFF8DC",
     padding: "1rem 1.5rem",
     borderRadius: "10px",
     border: "1px solid #FFD700",
-    color: "#333",
     marginBottom: "2rem",
     lineHeight: "1.6",
   },
   fileUploadLabel: {
     display: "inline-block",
-    backgroundColor: "#FFD700", // Jaune SAPHIR
+    backgroundColor: "#FFD700",
     padding: "10px 20px",
     borderRadius: "8px",
     cursor: "pointer",
@@ -188,5 +258,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: "center",
     gap: "1rem",
     marginTop: "1.5rem",
+  },
+  historyBox: {
+    marginTop: "2rem",
+    padding: "1rem",
+    backgroundColor: "#f4f9ff",
+    border: "1px solid #0057A0",
+    borderRadius: "10px",
+  },
+  historyItem: {
+    marginBottom: "0.5rem",
+  },
+  link: {
+    marginLeft: "1rem",
+    color: "#0057A0",
+    textDecoration: "underline",
+    fontWeight: "bold",
   },
 };

@@ -85,7 +85,16 @@ const HomePage: React.FC = () => {
   };
 
   return (
+    
     <div style={styles.container}>
+    {/* Logo SAFIR en haut de la page */}
+    <div style={{ textAlign: "center", marginBottom: "1rem" }}>
+      <img 
+        src="LOGO SAFIR.png" 
+        alt="Logo SAFIR" 
+        style={{ maxWidth: "180px", height: "auto" }}
+      />
+    </div>
       <h1 style={styles.title}>🧾 Extraction Automatique de Relevé Bancaire</h1>
 
       {/* Texte explicatif si aucun fichier */}

@@ -3,7 +3,7 @@ import axios from 'axios';
 
 
 //const API_URL ='https://implementation-ocr-finances-backend.onrender.com/api'; //'http://localhost:8000/api'; // Assure-toi que ton backend tourne bien à ce port
-const API_URL = 'http://localhost:8000/api';
+const API_URL = 'http://localhost:8001/api';
 
 // ✅ Upload et extraction automatique via OCR
 export const uploadAndExtract = async (file: File) => {
